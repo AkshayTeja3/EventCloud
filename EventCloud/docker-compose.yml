@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: eventcloud
+      POSTGRES_USER: eventcloud
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-change-me-local}
+    ports: ["5432:5432"]
+    volumes: [eventcloud-db:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventcloud -d eventcloud"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  backend:
+    build: backend
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/eventcloud
+      DATABASE_USERNAME: eventcloud
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-change-me-local}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET to a random secret of at least 32 bytes}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
+      UPLOAD_DIR: /app/uploads
+    ports: ["8080:8080"]
+    volumes: [eventcloud-uploads:/app/uploads]
+    depends_on:
+      db: {condition: service_healthy}
+volumes:
+  eventcloud-db:
+  eventcloud-uploads:
